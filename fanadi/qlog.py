@@ -1,5 +1,8 @@
 import ctypes
 
+from fanadi.data_types import *
+from fanadi.util import *
+
 class c_xyz(ctypes.BigEndianStructure): # Size: 0xC
     _pack_ = 1
     _fields_ = [
@@ -9,8 +12,58 @@ class c_xyz(ctypes.BigEndianStructure): # Size: 0xC
     ]
 assert(ctypes.sizeof(c_xyz) == 0xC)
 
-
 class c_player_status_a(ctypes.BigEndianStructure): # Size: 0x28
+    class c_select_equip(ctypes.BigEndianStructure): # Size: 0x06
+        _pack_ = 1
+        _fields_ = [
+            ("Clothing", ctypes.c_uint8),           # 0x00
+            ("Sword", ctypes.c_uint8),              # 0x01
+            ("Shield", ctypes.c_uint8),             # 0x02
+            ("Smell", ctypes.c_uint8),              # 0x03
+            ("BButton", ctypes.c_uint8),            # 0x04
+            ("_padding", ctypes.c_uint8)            # 0x05
+        ]
+
+        _field_ui_types_ = {
+            "Clothing": e_item_clothing,
+            "Sword": e_item_sword,
+            "Shield": e_item_shield,
+            "Smell": e_item_smell,
+            "BButton": e_item
+        }
+
+    class c_select_item(ctypes.BigEndianStructure): # Size: 0x04
+        _pack_ = 1
+        _fields_ = [
+            ("XLeft", ctypes.c_uint8),              # 0x00
+            ("YRight", ctypes.c_uint8),             # 0x01
+            ("Down", ctypes.c_uint8),               # 0x02
+            ("B", ctypes.c_uint8),                  # 0x03
+        ]
+
+        _field_ui_types_ = {
+            "XLeft": e_item_slot,
+            "YRight": e_item_slot,
+            "Down": e_item_slot,
+            "B": e_item_slot
+        }
+
+    class c_mix_item(ctypes.BigEndianStructure): # Size: 0x04
+        _pack_ = 1
+        _fields_ = [
+            ("XLeft", ctypes.c_uint8),              # 0x00
+            ("YRight", ctypes.c_uint8),             # 0x01
+            ("Down", ctypes.c_uint8),               # 0x02
+            ("B", ctypes.c_uint8),                  # 0x03
+        ]
+
+        _field_ui_types_ = {
+            "XLeft": e_item_slot,
+            "YRight": e_item_slot,
+            "Down": e_item_slot,
+            "B": e_item_slot
+        }
+
     _pack_ = 1
     _fields_ = [
         ("MaxLife", ctypes.c_uint16),               # 0x00
@@ -19,9 +72,9 @@ class c_player_status_a(ctypes.BigEndianStructure): # Size: 0x28
         ("MaxOil", ctypes.c_uint16),                # 0x06
         ("Oil", ctypes.c_uint16),                   # 0x08
         ("unk10", ctypes.c_uint8),                  # 0x0A
-        ("SelectItem", ctypes.c_uint8 * 4),         # 0x0B
-        ("MixItem", ctypes.c_uint8 * 4),            # 0x0F
-        ("SelectEquip", ctypes.c_uint8 * 6),        # 0x13
+        ("SelectItem", c_select_item),              # 0x0B
+        ("MixItem", c_mix_item),                    # 0x0F
+        ("SelectEquip", c_select_equip),            # 0x13
         ("WalletSize", ctypes.c_uint8),             # 0x19
         ("MaxMagic", ctypes.c_uint8),               # 0x1A
         ("Magic", ctypes.c_uint8),                  # 0x1B
@@ -31,6 +84,12 @@ class c_player_status_a(ctypes.BigEndianStructure): # Size: 0x28
         ("unk31", ctypes.c_uint8 * 3),              # 0x1F
         ("_padding", ctypes.c_uint8 * 6),           # 0x22
     ]
+
+    _field_ui_types_ = {
+        "WalletSize": e_wallets,
+        "TransformStatus": e_transform_status
+    }
+
 assert(ctypes.sizeof(c_player_status_a) == 0x28)
 
 
@@ -110,6 +169,11 @@ class c_player_item(ctypes.BigEndianStructure): # Size: 0x30
         ("Items", ctypes.c_uint8 * 24),             # 0x00
         ("ItemSlots", ctypes.c_uint8 * 24),         # 0x18
     ]
+
+    _field_ui_types_ = {
+        "Items": e_item,
+        "ItemSlots": e_item_slot
+    }
 assert(ctypes.sizeof(c_player_item) == 0x30)
 
 
@@ -215,7 +279,7 @@ assert(ctypes.sizeof(c_player_info) == 0x40)
 class c_player_config(ctypes.BigEndianStructure): # Size: 0xC
     _pack_ = 1
     _fields_ = [
-        ("unk0", ctypes.c_uint8),                   # 0x00
+        ("FuriganaOff", ctypes.c_uint8),            # 0x00
         ("SoundMode", ctypes.c_uint8),              # 0x01
         ("AttentionType", ctypes.c_uint8),          # 0x02
         ("Vibration", ctypes.c_uint8),              # 0x03
@@ -227,6 +291,17 @@ class c_player_config(ctypes.BigEndianStructure): # Size: 0xC
         ("CameraControl", ctypes.c_uint8),          # 0x0A
         ("Pointer", ctypes.c_uint8),                # 0x0B
     ]
+
+    _field_ui_types_ = {
+        "FuriganaOff": e_boolean,
+        "SoundMode": e_sound_mode,
+        "AttentionType": e_attention_type,
+        "Vibration": e_boolean,
+        "Language": e_language,
+        "ShortCut": e_boolean,
+        "CameraControl": e_camera_control,
+        "Pointer": e_boolean
+    }
 assert(ctypes.sizeof(c_player_config) == 0xC)
 
 
@@ -401,6 +476,38 @@ class c_save(ctypes.BigEndianStructure): # Size: 0x958
     ]
 assert(ctypes.sizeof(c_save) == 0x958)
 
+class c_qlog(ctypes.BigEndianStructure): # Size: 0xA94
+    _pack_ = 1
+    _fields_ = [
+        ("Save", c_save),                           # 0x000
+        ("unk0", ctypes.c_uint8 * 0x134),           # 0x95C
+        ("Checksum", ctypes.c_uint64)               # 0xA8C
+    ]
+
+    def recalculate_checksum(self):
+        self.Checksum = qlog_checksum(bytes(self)[:(ctypes.sizeof(c_qlog) - ctypes.sizeof(ctypes.c_uint64))])
+
+assert(ctypes.sizeof(c_qlog) == 0xA94)
+
+class c_dat(ctypes.BigEndianStructure): # size: 0x2000
+    _pack_ = 1
+    _fields_ = [
+        ("unk0", ctypes.c_uint32),                  # 0x0000
+        ("DataVersion", ctypes.c_uint32),           # 0x0004
+        ("Log1", c_qlog),                           # 0x0008
+        ("Log2", c_qlog),                           # 0x0A9C
+        ("Log3", c_qlog),                           # 0x1530
+        ("unk1", ctypes.c_uint8 * 0x38),            # 0x1FC4
+        ("Checksum", ctypes.c_uint32)               # 0x1FFC
+    ]
+
+    def recalculate_checksums(self):
+        self.Log1.recalculate_checksum()
+        self.Log2.recalculate_checksum()
+        self.Log3.recalculate_checksum()
+        self.Checksum = dat_checksum(bytes(self)[:(ctypes.sizeof(c_dat) - ctypes.sizeof(ctypes.c_uint32))])
+
+assert(ctypes.sizeof(c_dat) == 0x2000)
 
 class c_info(ctypes.BigEndianStructure): # Size: 0xF38
     _pack_ = 1
