@@ -36,7 +36,6 @@ class QLogEditor(StructTreeEditor):
 
     def update_qlog(self):
         data = self.get_values_as_dict()
-        print(data)
         self.apply_dict_to_struct(data, self.qlog.Save)
 
 class FanadiWindow(QMainWindow):
