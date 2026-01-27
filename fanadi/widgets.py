@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
 import sys
 
 class ExportSaveConfigureDialog(QDialog):
-    def __init__(self, qlogs, regions, parent=None):
+    def __init__(self, qlogs, regions, parent=None, enable_region=True):
         super().__init__(parent)
         self.setWindowTitle("Configure Export")
 
@@ -34,9 +34,10 @@ class ExportSaveConfigureDialog(QDialog):
         for region in regions:
             self.region.addItem(region, region)
         
-        row.addWidget(QLabel("Region"))
-        row.addWidget(self.region)
-        layout.addLayout(row)
+        if enable_region:
+            row.addWidget(QLabel("Region"))
+            row.addWidget(self.region)
+            layout.addLayout(row)
 
         button_row = QHBoxLayout()
         ok_btn = QPushButton("OK")
