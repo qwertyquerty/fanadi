@@ -1,4 +1,5 @@
 import ctypes
+import array
 
 from fanadi.data_types import *
 from fanadi.util import *
@@ -474,6 +475,14 @@ class c_save(ctypes.BigEndianStructure): # Size: 0x958
         ("reserve", c_reserve),                     # 0x8F0
         ("MiniGame", c_minigame),                   # 0x940
     ]
+
+    @classmethod
+    def from_qlog_file(cls, filename: str):
+        with open(filename, "rb") as f:
+            ba = array.array("b")
+            ba.fromfile(f, ctypes.sizeof(cls))
+            return cls.from_buffer_copy(ba)
+
 assert(ctypes.sizeof(c_save) == 0x958)
 
 class c_qlog(ctypes.BigEndianStructure): # Size: 0xA94
