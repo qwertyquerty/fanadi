@@ -33,6 +33,11 @@ class QLogEditor(StructTreeEditor):
 
         super().__init__(self.qlog.Save)
 
+    def update_qlog(self):
+        data = self.get_values_as_dict()
+        print(data)
+        self.apply_dict_to_struct(data, self.qlog.Save)
+
 class FanadiWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -89,7 +94,7 @@ class FanadiWindow(QMainWindow):
     def add_editor(self, editor):
         try:
             self.editors.append(editor)
-            name = editor.qlog.Save.Player.PlayerInfo.PlayerName.decode("ascii")
+            name = editor.qlog.Save.Player.PlayerInfo.PlayerName.decode("latin-1")
             self.editor_tabs.addTab(editor, editor.name)
         except:
             QMessageBox.warning(self, "Error", "Error parsing file!")
@@ -141,7 +146,13 @@ class FanadiWindow(QMainWindow):
     def get_qlog_from_editor_index(self, index):
         return self.editors[index].qlog if index is not None else 0
 
+    def update_qlogs(self):
+        for editor in self.editors:
+            editor.update_qlog()
+
     def export_gci(self):
+        self.update_qlogs()
+
         dialog = ExportSaveConfigureDialog([editor.name for editor in self.editors], REGIONS)
 
         if dialog.exec() == QDialog.Accepted:
