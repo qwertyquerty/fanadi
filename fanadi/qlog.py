@@ -487,6 +487,9 @@ class c_qlog(ctypes.BigEndianStructure): # Size: 0xA94
     def recalculate_checksum(self):
         self.Checksum = qlog_checksum(bytes(self)[:(ctypes.sizeof(c_qlog) - ctypes.sizeof(ctypes.c_uint64))])
 
+    def to_bytes_without_checksum(self):
+        return bytes(self)[:-ctypes.sizeof(ctypes.c_uint64)]
+
 assert(ctypes.sizeof(c_qlog) == 0xA94)
 
 class c_dat(ctypes.BigEndianStructure): # size: 0x2000

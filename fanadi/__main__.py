@@ -15,6 +15,7 @@ from fanadi.const import *
 
 from pathlib import Path
 import copy
+import os
 
 app = QApplication(sys.argv)
 qdarktheme.setup_theme(corner_shape="sharp")
@@ -72,7 +73,10 @@ class FanadiWindow(QMainWindow):
         self.export_gci_action.triggered.connect(self.export_gci)
         self.file_menu.addAction(self.export_gci_action)
 
-        self.file_menu.addAction("Export QLog(s)")
+        self.export_qlogs_action = QAction("Export QLog(s)", self)
+        self.export_qlogs_action.triggered.connect(self.export_qlogs)
+        self.file_menu.addAction(self.export_qlogs_action)
+
         self.file_menu.addAction("Export Wii Save")
 
         self.resize(1000, 600)
@@ -178,6 +182,18 @@ class FanadiWindow(QMainWindow):
                 with open(filename, "wb") as f:
                     f.write(write_gci(gci))
 
+    def export_qlogs(self):
+        self.update_qlogs()
+
+        for editor in self.editors:
+            filename = self.save_single_file_dialog("qlog", editor.name)
+            
+            if filename:
+                editor.qlog.recalculate_checksum()
+
+                with open(filename, "wb") as f:
+                    f.write(editor.qlog.to_bytes_without_checksum())
+
     def open_single_file_dialog(self, file_type):
         filename, filter = QFileDialog.getOpenFileName(
             parent=self,
@@ -204,12 +220,12 @@ class FanadiWindow(QMainWindow):
             if file_type == "qlog":
                 self.load_qlogs(filenames)
 
-    def save_single_file_dialog(self, file_type):
+    def save_single_file_dialog(self, file_type, default_name=None):
         filename, filter = QFileDialog.getSaveFileName(
             parent=self,
-            caption='Select a file to open',
-            dir='.',
-            filter=f'{"GCI" if file_type == "gci" else "Wii Save"} Files (*.{file_type});;All Files (*.*)'
+            caption='Select a file to save',
+            dir=os.path.join('.', default_name) if default_name else '.',
+            filter=f'{"GCI" if file_type == "gci" else ("Quest Log" if file_type == "qlog" else "Wii Save")} Files (*.{"gci" if file_type == "gci" else "bin"});;All Files (*.*)'
         )
 
         return filename
