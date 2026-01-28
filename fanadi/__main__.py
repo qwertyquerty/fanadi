@@ -1,10 +1,7 @@
-import sys
 import ctypes
 import array
 
-import qdarktheme
-
-from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QGridLayout, QSizePolicy, QWidget, QFileDialog, QMessageBox, QProgressDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QGridLayout, QSizePolicy, QWidget, QFileDialog, QMessageBox, QProgressDialog, QListWidget, QListView
 from PySide6.QtGui  import QFont, QIcon, QAction
 
 from fanadi.qlog import c_save, c_dat, c_qlog
@@ -15,16 +12,6 @@ from fanadi.const import *
 
 from pathlib import Path
 import copy
-
-app = QApplication(sys.argv)
-qdarktheme.setup_theme(corner_shape="sharp")
-qdarktheme.enable_hi_dpi()
-global_font = QFont("Consolas", 12) # Specify font family and point size
-app.setFont(global_font)
-
-icon = QIcon()
-icon.addFile("triforce.png")
-app.setWindowIcon(icon)
 
 class QLogEditor(StructTreeEditor):
     def __init__(self, qlog: c_qlog, name: str):
@@ -47,7 +34,18 @@ class FanadiWindow(QMainWindow):
         layout = QGridLayout(self.window)
         layout.addWidget(self.editor_tabs, 0, 0, 1, 1)
 
+        self.save_previews = QListWidget()
+        layout.addWidget(self.save_previews, 0, 1, 1, 1)
+        self.save_previews.itemClicked.connect(self.preview_clicked_callback)
+        self.save_previews.setUniformItemSizes(True)
+        self.save_previews.setResizeMode(QListView.Adjust)
+
+        layout.setColumnStretch(0, 5)
+        layout.setColumnStretch(1, 2)
+
         self.file_menu = self.menuBar().addMenu("&File")
+        self.edit_menu = self.menuBar().addMenu("&Edit")
+        self.help_menu = self.menuBar().addMenu("&Help")
 
         self.open_gci_action = QAction("Open GCI", self)
         self.open_gci_action.triggered.connect(lambda: self.open_single_file_dialog("gci"))
@@ -73,6 +71,9 @@ class FanadiWindow(QMainWindow):
         self.resize(1000, 600)
         self.setWindowTitle("Fanadi")
 
+    def preview_clicked_callback(self, item):
+        self.editor_tabs.setCurrentIndex(self.save_previews.row(item))
+
     def create_editors(self, qlogs, names):
         bar = QProgressDialog("Loading...", None, 0, len(qlogs))
         bar.setWindowTitle("Loading...")
@@ -81,24 +82,29 @@ class FanadiWindow(QMainWindow):
 
         i = 0
         for qlog,name in zip(qlogs,names):
-            self.add_editor(QLogEditor(qlog, name))
+            self.add_editor(qlog, name)
             i += 1
             bar.setValue(i)
             QApplication.processEvents()
 
-    def add_editor(self, editor):
-        try:
-            self.editors.append(editor)
-            name = editor.qlog.Save.Player.PlayerInfo.PlayerName.decode("ascii")
-            self.editor_tabs.addTab(editor, editor.name)
-        except:
-            QMessageBox.warning(self, "Error", "Error parsing file!")
+    def add_editor(self, qlog, name):
+        editor = QLogEditor(qlog, name)
+        self.editors.append(editor)
+        self.editor_tabs.addTab(editor, editor.name)
+
+        item = QListWidgetItem()
+        preview = SavefileInfoWidget(editor.name, qlog, self.save_previews)
+        self.save_previews.addItem(item)
+        self.save_previews.setItemWidget(item, preview)
+        item.setSizeHint(preview.sizeHint())  
 
     def clear_editors(self):
         self.editor_tabs.clear()
 
         for editor in self.editors:
             editor.deleteLater()
+        
+        self.save_previews.clear()
 
         self.editors = []
 
@@ -204,7 +210,6 @@ class FanadiWindow(QMainWindow):
         return filename
 
 
-window = FanadiWindow()
-window.show()
-
-sys.exit(app.exec())
+    def change_tab(self, item):
+        index = self.listWidget.row(item)
+        self.tabWidget.setCurrentIndex(index)
