@@ -12,6 +12,7 @@ from fanadi.const import *
 
 from pathlib import Path
 import copy
+import os
 
 class QLogEditor(StructTreeEditor):
     def __init__(self, qlog: c_qlog, name: str):
@@ -19,6 +20,10 @@ class QLogEditor(StructTreeEditor):
         self.name = name
 
         super().__init__(self.qlog.Save)
+
+    def update_qlog(self):
+        data = self.get_values_as_dict()
+        self.apply_dict_to_struct(data, self.qlog.Save)
 
 class FanadiWindow(QMainWindow):
     def __init__(self):
@@ -55,9 +60,9 @@ class FanadiWindow(QMainWindow):
         self.open_qlogs_action.triggered.connect(lambda: self.open_multi_file_dialog("qlog"))
         self.file_menu.addAction(self.open_qlogs_action)
 
-        self.open_bin_action = QAction("Open Wii Save", self)
-        self.open_bin_action.triggered.connect(lambda: self.open_single_file_dialog("bin"))
-        self.file_menu.addAction(self.open_bin_action)
+        self.open_dat_action = QAction("Open Wii dat", self)
+        self.open_dat_action.triggered.connect(lambda: self.open_single_file_dialog("dat"))
+        self.file_menu.addAction(self.open_dat_action)
 
         self.file_menu.addSeparator()
 
@@ -65,8 +70,13 @@ class FanadiWindow(QMainWindow):
         self.export_gci_action.triggered.connect(self.export_gci)
         self.file_menu.addAction(self.export_gci_action)
 
-        self.file_menu.addAction("Export QLog(s)")
-        self.file_menu.addAction("Export Wii Save")
+        self.export_qlogs_action = QAction("Export QLog(s)", self)
+        self.export_qlogs_action.triggered.connect(self.export_qlogs)
+        self.file_menu.addAction(self.export_qlogs_action)
+
+        self.export_dat_action = QAction("Export Wii dat", self)
+        self.export_dat_action.triggered.connect(self.export_dat)
+        self.file_menu.addAction(self.export_dat_action)
 
         self.resize(1000, 600)
         self.setWindowTitle("Fanadi")
@@ -110,16 +120,25 @@ class FanadiWindow(QMainWindow):
 
         QApplication.processEvents()
 
-    def load_gci(self, filename):
+    def load_gci(self, filename: str):
         self.clear_editors()
 
-        self.gci = read_gci(filename)
+        gci = read_gci(filename)
         ba = array.array("b")
-        ba.frombytes(self.gci["m_save_data"][2])
-        gci_save_data_struct = c_dat.from_buffer_copy(ba)
+        ba.frombytes(gci["m_save_data"][2])
+        self.create_editors_from_dat(c_dat.from_buffer_copy(ba))
 
-        qlogs = [gci_save_data_struct.Log1, gci_save_data_struct.Log2, gci_save_data_struct.Log3]
+    def load_dat(self, filename: str):
+        self.clear_editors()
 
+        with open(filename, "rb") as dat_file:
+            dat = dat_file.read()
+            ba = array.array("b")
+            ba.frombytes(dat)
+            self.create_editors_from_dat(c_dat.from_buffer_copy(ba))
+
+    def create_editors_from_dat(self, dat: c_dat):
+        qlogs = [dat.Log1, dat.Log2, dat.Log3]
         self.create_editors(qlogs, [f"Log {i+1}" for i in range(3)])
 
     def load_qlogs(self, filenames):
@@ -141,13 +160,16 @@ class FanadiWindow(QMainWindow):
         
         self.create_editors(qlogs, names)
 
-    def load_bin(self, filename):
-        QMessageBox.warning(self, "Error", "Not implemented yet!")
-
     def get_qlog_from_editor_index(self, index):
         return self.editors[index].qlog if index is not None else 0
 
+    def update_qlogs(self):
+        for editor in self.editors:
+            editor.update_qlog()
+
     def export_gci(self):
+        self.update_qlogs()
+
         dialog = ExportSaveConfigureDialog([editor.name for editor in self.editors], REGIONS)
 
         if dialog.exec() == QDialog.Accepted:
@@ -158,13 +180,7 @@ class FanadiWindow(QMainWindow):
             
             if filename:
                 gci = copy.deepcopy(TEMPLATE_GCI)
-                dat = c_dat()
-                dat.Log1 = self.get_qlog_from_editor_index(logs[0]) or c_qlog()
-                dat.Log2 = self.get_qlog_from_editor_index(logs[1]) or c_qlog()
-                dat.Log3 = self.get_qlog_from_editor_index(logs[2]) or c_qlog()
-                dat.DataVersion = DATA_VERSION
-                dat.recalculate_checksums()
-
+                dat = self.pack_editors_to_dat(logs)
                 gci["m_save_data"].append(bytes(dat))
                 gci["m_save_data"].append(bytes(dat)) # backup
                 gci["m_gci_header"]["Gamecode"] = region
@@ -173,19 +189,56 @@ class FanadiWindow(QMainWindow):
                 with open(filename, "wb") as f:
                     f.write(write_gci(gci))
 
+    def export_dat(self):
+        self.update_qlogs()
+
+        dialog = ExportSaveConfigureDialog([editor.name for editor in self.editors], REGIONS, enable_region=False)
+
+        if dialog.exec() == QDialog.Accepted:
+            logs = dialog.get_logs()
+            filename = self.save_single_file_dialog("dat")
+            
+            if filename:
+                dat = self.pack_editors_to_dat(logs)
+                with open(filename, "wb") as f:
+                    f.write(bytes(dat))
+                    f.write(bytes(dat)) # second write for backup
+
+    def pack_editors_to_dat(self, editor_indecies):
+        dat = c_dat()
+        dat.Log1 = self.get_qlog_from_editor_index(editor_indecies[0]) or c_qlog()
+        dat.Log2 = self.get_qlog_from_editor_index(editor_indecies[1]) or c_qlog()
+        dat.Log3 = self.get_qlog_from_editor_index(editor_indecies[2]) or c_qlog()
+        dat.DataVersion = DATA_VERSION
+        dat.recalculate_checksums()
+
+        return dat
+
+    def export_qlogs(self):
+        self.update_qlogs()
+
+        for editor in self.editors:
+            filename = self.save_single_file_dialog("qlog", editor.name)
+            
+            if filename:
+                editor.qlog.recalculate_checksum()
+
+                with open(filename, "wb") as f:
+                    f.write(editor.qlog.to_bytes_without_checksum())
+
     def open_single_file_dialog(self, file_type):
         filename, filter = QFileDialog.getOpenFileName(
             parent=self,
             caption='Select a file to open',
             dir='.',
-            filter=f'{"GCI" if file_type == "gci" else "Wii Save"} Files (*.{file_type});;All Files (*.*)'
+            filter=f'{"GCI" if file_type == "gci" else "Wii dat"} Files (*.{file_type});;All Files (*.*)'
         )
 
         if filename:
             if file_type == "gci":
                 self.load_gci(filename)
-            elif file_type == "bin":
-                self.load_bin(filename)
+            elif file_type == "dat":
+                self.load_dat(filename)
 
     def open_multi_file_dialog(self, file_type):
         filenames, filter = QFileDialog.getOpenFileNames(
@@ -199,12 +252,12 @@ class FanadiWindow(QMainWindow):
             if file_type == "qlog":
                 self.load_qlogs(filenames)
 
-    def save_single_file_dialog(self, file_type):
+    def save_single_file_dialog(self, file_type, default_name=None):
         filename, filter = QFileDialog.getSaveFileName(
             parent=self,
-            caption='Select a file to open',
-            dir='.',
-            filter=f'{"GCI" if file_type == "gci" else "Wii Save"} Files (*.{file_type});;All Files (*.*)'
+            caption='Select a file to save',
+            dir=os.path.join('.', default_name) if default_name else '.',
+            filter=f'{"GCI" if file_type == "gci" else ("Quest Log" if file_type == "qlog" else "Wii dat")} Files (*.{"gci" if file_type == "gci" else ("dat" if file_type == "dat" else "bin")});;All Files (*.*)'
         )
 
         return filename

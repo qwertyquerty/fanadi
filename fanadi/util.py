@@ -10,7 +10,6 @@ def qlog_checksum(data: bytes) -> int:
     
     return ((high & 0xFFFFFFFF) << 32) | (low & 0xFFFFFFFF)
 
-
 def dat_checksum(data: bytes) -> int:
     high = 0
     low = 0
@@ -26,9 +25,14 @@ def dat_checksum(data: bytes) -> int:
 
     return ((high & 0xFFFF) << 16) | (low & 0xFFFF)
 
-
 def ctype_limits(c_int_type):
     signed = c_int_type(-1).value < c_int_type(0).value
     bit_size = ctypes.sizeof(c_int_type) * 8
     signed_limit = 2 ** (bit_size - 1)
     return (-signed_limit, signed_limit - 1) if signed else (0, 2 * signed_limit - 1)
+
+def is_ctypes_char_array(field_type):
+    return (
+        issubclass(field_type, ctypes.Array)
+        and field_type._type_ is ctypes.c_char
+    )

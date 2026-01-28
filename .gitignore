@@ -1,3 +1,5 @@
 __pycache__
 *.bin
 *.gci
+!test_data/*
+venv

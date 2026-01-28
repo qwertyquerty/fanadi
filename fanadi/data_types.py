@@ -24,7 +24,8 @@ class e_item_slot(Enum):
     SLOT_20 = 0x14
     SLOT_21 = 0x15
     SLOT_22 = 0x16
-    SLOT_23 = 0x23
+    SLOT_23 = 0x17
+    SLOT_NONE = 0xFF
 
 class e_item(Enum):
     HEART = 0x00
