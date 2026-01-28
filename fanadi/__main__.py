@@ -3,6 +3,7 @@ import array
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QGridLayout, QSizePolicy, QWidget, QFileDialog, QMessageBox, QProgressDialog, QListWidget, QListView
 from PySide6.QtGui  import QFont, QIcon, QAction
+import qdarktheme
 
 from fanadi.qlog import c_save, c_dat, c_qlog
 from fanadi.struct_editor import StructTreeEditor
@@ -266,3 +267,19 @@ class FanadiWindow(QMainWindow):
     def change_tab(self, item):
         index = self.listWidget.row(item)
         self.tabWidget.setCurrentIndex(index)
+
+app = QApplication(sys.argv)
+qdarktheme.setup_theme(corner_shape="sharp")
+qdarktheme.enable_hi_dpi()
+global_font = QFont("Consolas", 12) # Specify font family and point size
+app.setFont(global_font)
+
+icon = QIcon()
+icon.addFile("triforce.png")
+app.setWindowIcon(icon)
+
+
+window = FanadiWindow()
+window.show()
+
+sys.exit(app.exec())
