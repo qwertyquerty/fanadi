@@ -50,7 +50,6 @@ class FanadiWindow(QMainWindow):
         layout.setColumnStretch(1, 2)
 
         self.file_menu = self.menuBar().addMenu("&File")
-        self.edit_menu = self.menuBar().addMenu("&Edit")
         self.help_menu = self.menuBar().addMenu("&Help")
 
         self.open_gci_action = QAction("Open GCI", self)
@@ -78,6 +77,10 @@ class FanadiWindow(QMainWindow):
         self.export_dat_action = QAction("Export Wii dat", self)
         self.export_dat_action.triggered.connect(self.export_dat)
         self.file_menu.addAction(self.export_dat_action)
+
+        self.about_action = QAction("About", self)
+        self.about_action.triggered.connect(self.about_dialog)
+        self.help_menu.addAction(self.about_action)
 
         self.resize(1000, 600)
         self.setWindowTitle("Fanadi")
@@ -268,18 +271,6 @@ class FanadiWindow(QMainWindow):
         index = self.listWidget.row(item)
         self.tabWidget.setCurrentIndex(index)
 
-app = QApplication(sys.argv)
-qdarktheme.setup_theme(corner_shape="sharp")
-qdarktheme.enable_hi_dpi()
-global_font = QFont("Consolas", 12) # Specify font family and point size
-app.setFont(global_font)
+    def about_dialog(self):
+        QMessageBox.information(self, "About", f"Fanadi v{VERSION} by {AUTHOR}")
 
-icon = QIcon()
-icon.addFile("triforce.png")
-app.setWindowIcon(icon)
-
-
-window = FanadiWindow()
-window.show()
-
-sys.exit(app.exec())
