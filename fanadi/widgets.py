@@ -108,7 +108,7 @@ class SavefileInfoWidget(QGroupBox):
         max_life = self.qlog.Save.Player.PlayerStatusA.MaxLife
         rupees = self.qlog.Save.Player.PlayerStatusA.Rupee
         deaths = self.qlog.Save.Player.PlayerInfo.DeathCount
-        location = self.qlog.Save.Player.PlayerReturnPlace.Name.decode()
+        location = self.qlog.Save.Player.PlayerReturnPlace.Name.decode(errors="ignore")
         room = self.qlog.Save.Player.PlayerReturnPlace.RoomNo
 
         self.name_label.setText(f"{player_name} / {horse_name}" if len(player_name) else "Empty File")
