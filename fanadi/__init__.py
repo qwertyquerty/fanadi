@@ -10,6 +10,7 @@ from fanadi.struct_editor import StructTreeEditor
 from fanadi.gci import read_gci
 from fanadi.widgets import *
 from fanadi.const import *
+from fanadi.nandpack import *
 
 from pathlib import Path
 import copy
@@ -63,6 +64,10 @@ class FanadiWindow(QMainWindow):
         self.open_dat_action = QAction("Open Wii dat", self)
         self.open_dat_action.triggered.connect(lambda: self.open_single_file_dialog("dat"))
         self.file_menu.addAction(self.open_dat_action)
+
+        self.open_bin_action = QAction("Open Wii bin", self)
+        self.open_bin_action.triggered.connect(lambda: self.open_single_file_dialog("bin"))
+        self.file_menu.addAction(self.open_bin_action)
 
         self.file_menu.addSeparator()
 
@@ -140,6 +145,15 @@ class FanadiWindow(QMainWindow):
             ba = array.array("b")
             ba.frombytes(dat)
             self.create_editors_from_dat(c_dat.from_buffer_copy(ba))
+
+    def load_wii_bin(self, filename: str):
+        self.clear_editors()
+        with open(filename, "rb") as bin_file:
+            bin = SaveBin.from_file(bin_file)
+            dat = bin.files[find_zeldaTp_idx(bin)].data
+            ba = array.array("b")
+            ba.frombytes(dat)
+            self.create_editors_from_dat(c_dat.from_buffer_copy(ba))   
 
     def create_editors_from_dat(self, dat: c_dat):
         qlogs = [dat.Log1, dat.Log2, dat.Log3]
@@ -235,7 +249,7 @@ class FanadiWindow(QMainWindow):
             parent=self,
             caption='Select a file to open',
             dir='.',
-            filter=f'{"GCI" if file_type == "gci" else "Wii dat"} Files (*.{file_type});;All Files (*.*)'
+            filter=f'{"GCI" if file_type == "gci" else ("Wii dat" if file_type == "dat" else "Wii bin")} Files (*.{file_type});;All Files (*.*)'
         )
 
         if filename:
@@ -243,6 +257,8 @@ class FanadiWindow(QMainWindow):
                 self.load_gci(filename)
             elif file_type == "dat":
                 self.load_dat(filename)
+            elif file_type == "bin":
+                self.load_wii_bin(filename)
 
     def open_multi_file_dialog(self, file_type):
         filenames, filter = QFileDialog.getOpenFileNames(
